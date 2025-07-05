@@ -1,19 +1,12 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # dependencies
 /node_modules
 /.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+.pnp.js
 
 # testing
 /coverage
 
-# next.js
+# next.js build output
 /.next/
 /out/
 
@@ -22,20 +15,30 @@
 
 # misc
 .DS_Store
-*.pem
-
-# debug
+*.env
+.env.local      # <-- Sangat penting untuk Next.js
+.env.development.local
+.env.test.local
+.env.production.local
+.next/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+.pnpm-store/
 
-# env files (can opt-in for committing if needed)
-.env*
+# Local env files
+.env*.local
 
-# vercel
-.vercel
+# log files
+*.log
+.yarn/
+.pnpm/
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# next-auth
+.next-auth
+
+# Prisma
+*.sqlite
+db.sqlite
+*.db
