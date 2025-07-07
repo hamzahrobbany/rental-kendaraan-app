@@ -1,6 +1,7 @@
+// tsconfig.json
 {
   "compilerOptions": {
-    "target": "ES2017",
+    "target": "ES2020", // Atau "ESNext" untuk yang terbaru
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
@@ -22,13 +23,13 @@
       "@/*": ["./src/*"]
     }
   },
-    "include": [
+  "include": [
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
     "**/*.mjs",
-    ".next/types/**/*.ts", // Next.js 14+ secara otomatis menambahkan ini
-    "types/**/*.ts" // <-- Pastikan ini ada
+    ".next/types/**/*.ts",
+    "types/**/*.ts"
   ],
   "exclude": ["node_modules"]
 }
