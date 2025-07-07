@@ -1,14 +1,14 @@
 // src/app/auth/login/page.tsx
-'use client'; // Penting: Ini menandakan komponen ini berjalan di sisi klien
+'use client';
 
 import { useState, useEffect } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Input } from '@/components/ui/input'; // Import Input dari shadcn/ui
-import { Button } from '@/components/ui/button'; // Import Button dari shadcn/ui
-import { Label } from '@/components/ui/label'; // Import Label dari shadcn/ui
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'; // Import Card components
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -20,7 +20,6 @@ export default function LoginPage() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    // Cek jika ada parameter error dari NextAuth atau parameter registrasi berhasil
     const authError = searchParams.get('error');
     const regSuccess = searchParams.get('registrationSuccess');
 
@@ -34,7 +33,6 @@ export default function LoginPage() {
 
     if (regSuccess === 'true') {
       setRegistrationSuccess(true);
-      // Hapus parameter dari URL setelah ditampilkan
       const newUrl = new URL(window.location.href);
       newUrl.searchParams.delete('registrationSuccess');
       router.replace(newUrl.toString(), { scroll: false });
@@ -44,10 +42,10 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setRegistrationSuccess(false); // Reset status registrasi
+    setRegistrationSuccess(false);
 
     const result = await signIn('credentials', {
-      redirect: false, // Jangan redirect otomatis, kita tangani sendiri
+      redirect: false,
       email,
       password,
     });
@@ -59,26 +57,25 @@ export default function LoginPage() {
         setError('Terjadi kesalahan saat login: ' + result.error);
       }
     } else if (result?.ok) {
-      // Login berhasil, redirect ke dashboard atau halaman utama
-      router.push('/dashboard'); // Atau '/'
+      router.push('/dashboard');
     }
   };
 
-  // Fungsi untuk login dengan Google
   const handleGoogleLogin = async () => {
     setError(null);
     setRegistrationSuccess(false);
-    await signIn('google', { callbackUrl: '/dashboard' }); // Redirect ke dashboard setelah login Google
+    await signIn('google', { callbackUrl: '/dashboard' });
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md"> {/* Gunakan Card sebagai container utama */}
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">Login</CardTitle>
           <CardDescription>Masuk ke akun Anda untuk melanjutkan.</CardDescription>
         </CardHeader>
         <CardContent>
+          {/* Formulir Login Email/Password */}
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <Label htmlFor="email">Email</Label>
@@ -111,7 +108,8 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="relative mt-6">
+          {/* Pemisah "Atau" */}
+          <div className="relative mt-6 mb-4"> {/* Atur margin di sini */}
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t" />
             </div>
@@ -122,11 +120,11 @@ export default function LoginPage() {
 
           {/* Tombol Login dengan Google */}
           <Button
-            variant="outline" // Menggunakan variant outline dari shadcn/ui
+            variant="outline"
             onClick={handleGoogleLogin}
-            className="w-full mt-4 flex items-center justify-center gap-2"
+            className="w-full flex items-center justify-center gap-2"
           >
-            {/* Anda bisa menambahkan ikon Google di sini */}
+            {/* Ikon Google SVG */}
             <svg
               className="w-5 h-5"
               aria-hidden="true"
@@ -145,6 +143,7 @@ export default function LoginPage() {
             Masuk dengan Google
           </Button>
 
+          {/* Link "Belum punya akun?" */}
           <div className="mt-4 text-center text-sm">
             Belum punya akun?{' '}
             <Link href="/auth/register" className="text-blue-600 hover:underline">
