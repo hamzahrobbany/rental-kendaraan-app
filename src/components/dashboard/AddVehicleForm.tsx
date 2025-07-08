@@ -1,25 +1,24 @@
-// src/components/dashboard/AddVehicleForm.tsx
+// src/components/dashboard/AddVehiclForm.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
-import { VehicleType, TransmissionType, FuelType, User, Role } from '@prisma/client';
-import { Button } from '@/components/ui/button';
+import { useState, useEffect, FormEvent } from 'react';
+import { VehicleType, TransmissionType, FuelType, User } from '@prisma/client';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-
-// Firebase Storage Imports
+import { getApps } from 'firebase/app';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { getApps } from 'firebase/app'; // Untuk memeriksa apakah Firebase sudah diinisialisasi
 
-interface AddVehicleFormProps {
+interface Props {
   onSuccess: () => void;
   onCancel: () => void;
 }
 
-export default function AddVehicleForm({ onSuccess, onCancel }: AddVehicleFormProps) {
+export default function AddVehicleWizardForm({ onSuccess, onCancel }: Props) {
+  const [step, setStep] = useState(1);
+
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [description, setDescription] = useState('');
@@ -27,106 +26,61 @@ export default function AddVehicleForm({ onSuccess, onCancel }: AddVehicleFormPr
   const [capacity, setCapacity] = useState('4');
   const [transmissionType, setTransmissionType] = useState<TransmissionType>(TransmissionType.AUTOMATIC);
   const [fuelType, setFuelType] = useState<FuelType>(FuelType.Bensin);
-  const [dailyRate, setDailyRate] = useState('250000');
+  const [dailyRate, setDailyRate] = useState('');
   const [lateFeePerDay, setLateFeePerDay] = useState('');
-  // const [mainImageUrl, setMainImageUrl] = useState(''); // <-- Hapus ini
-  const [imageFile, setImageFile] = useState<File | null>(null); // <-- BARU: State untuk file gambar
-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null); // <-- BARU: State untuk preview gambar
-  const [isAvailable, setIsAvailable] = useState(true);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [licensePlate, setLicensePlate] = useState('');
   const [city, setCity] = useState('');
-  const [ownerId, setOwnerId] = useState<string>('');
+  const [ownerId, setOwnerId] = useState('');
+  const [isAvailable, setIsAvailable] = useState(true);
 
   const [owners, setOwners] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
-  const [ownersLoading, setOwnersLoading] = useState(true);
-  const [ownersError, setOwnersError] = useState<string | null>(null);
-  const [imageUploading, setImageUploading] = useState(false); // <-- BARU: State untuk status upload gambar
 
-  // Fetch Owners for the dropdown
+  useEffect(() => {
+    setSlug(name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''));
+  }, [name]);
+
   useEffect(() => {
     const fetchOwners = async () => {
-      setOwnersLoading(true);
-      setOwnersError(null);
       try {
-        const response = await fetch('/api/admin/users?role=OWNER');
-        if (!response.ok) {
-          throw new Error('Failed to fetch owners');
-        }
-        const data: User[] = await response.json();
-        setOwners(data.filter(user => user.role === Role.OWNER));
-        if (data.filter(user => user.role === Role.OWNER).length > 0) {
-          setOwnerId(data.filter(user => user.role === Role.OWNER)[0].id.toString());
-        }
-      } catch (err: any) {
-        console.error('Error fetching owners:', err);
-        setOwnersError(err.message || 'Gagal memuat daftar pemilik.');
-      } finally {
-        setOwnersLoading(false);
+        const res = await fetch('/api/admin/users?role=OWNER');
+        const data: User[] = await res.json();
+        setOwners(data);
+        if (data.length > 0) setOwnerId(data[0].id.toString());
+      } catch (err) {
+        toast.error('Gagal mengambil data pemilik');
       }
     };
     fetchOwners();
   }, []);
 
-  // Generate slug automatically from name
-  useEffect(() => {
-    if (name) {
-      setSlug(name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-*|-*$/g, ''));
-    } else {
-      setSlug('');
-    }
-  }, [name]);
-
-  // Handle file input change
-  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setImageFile(file);
-      setImagePreviewUrl(URL.createObjectURL(file)); // Create a URL for preview
-    } else {
-      setImageFile(null);
-      setImagePreviewUrl(null);
+      setImagePreviewUrl(URL.createObjectURL(file));
     }
   };
 
-  // Function to upload image to Firebase Storage
-  const uploadImageToFirebase = async (file: File): Promise<string> => {
-    if (!getApps().length) {
-      toast.error('Error Firebase', { description: 'Firebase belum diinisialisasi. Mohon refresh halaman.' });
-      throw new Error('Firebase not initialized');
-    }
-    setImageUploading(true);
-    try {
-      const storage = getStorage(); // Dapatkan instance storage
-      const storageRef = ref(storage, `vehicle_images/${file.name}_${Date.now()}`); // Buat referensi file unik
-      const snapshot = await uploadBytes(storageRef, file); // Unggah file
-      const downloadURL = await getDownloadURL(snapshot.ref); // Dapatkan URL publik
-      toast.success('Gambar berhasil diunggah', { description: 'Gambar kendaraan telah berhasil diunggah.' });
-      return downloadURL;
-    } catch (error: any) {
-      console.error('Error uploading image to Firebase:', error);
-      toast.error('Gagal Unggah Gambar', { description: error.message || 'Terjadi kesalahan saat mengunggah gambar.' });
-      throw error;
-    } finally {
-      setImageUploading(false);
-    }
+  const uploadImage = async (): Promise<string> => {
+    if (!imageFile) return '';
+    if (!getApps().length) throw new Error('Firebase tidak diinisialisasi');
+    const storage = getStorage();
+    const refFile = ref(storage, `vehicle_images/${imageFile.name}_${Date.now()}`);
+    const snap = await uploadBytes(refFile, imageFile);
+    return await getDownloadURL(snap.ref);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    let finalImageUrl = '';
-
     try {
-      if (imageFile) {
-        finalImageUrl = await uploadImageToFirebase(imageFile); // Upload gambar jika ada
-      }
-
-      const response = await fetch('/api/admin/vehicles', {
+      const imageUrl = await uploadImage();
+      const res = await fetch('/api/admin/vehicles', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name,
           slug,
@@ -137,184 +91,84 @@ export default function AddVehicleForm({ onSuccess, onCancel }: AddVehicleFormPr
           fuelType,
           dailyRate: parseFloat(dailyRate),
           lateFeePerDay: parseFloat(lateFeePerDay || '0'),
-          mainImageUrl: finalImageUrl, // Kirim URL yang didapat dari Firebase Storage
-          isAvailable,
+          mainImageUrl: imageUrl,
           licensePlate,
           city,
+          isAvailable,
           ownerId: parseInt(ownerId),
         }),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Gagal menambahkan kendaraan.');
-      }
-
+      if (!res.ok) throw new Error('Gagal menyimpan kendaraan');
+      toast.success('Kendaraan berhasil ditambahkan');
       onSuccess();
-      // Reset form
-      setName('');
-      setSlug('');
-      setDescription('');
-      setType(VehicleType.SEDAN);
-      setCapacity('4');
-      setTransmissionType(TransmissionType.AUTOMATIC);
-      setFuelType(FuelType.Bensin);
-      setDailyRate('250000');
-      setLateFeePerDay('');
-      setImageFile(null); // Reset file input
-      setImagePreviewUrl(null); // Reset preview
-      setIsAvailable(true);
-      setLicensePlate('');
-      setCity('');
-      setOwnerId(owners.length > 0 ? owners[0].id.toString() : '');
-
     } catch (err: any) {
-      console.error('Error adding vehicle:', err);
-      toast.error('Gagal Menambahkan Kendaraan', {
-        description: err.message || 'Terjadi kesalahan saat menambahkan kendaraan.',
-      });
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-      <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-        <Label htmlFor="name" className="sm:text-right">Nama</Label>
-        <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="sm:col-span-3" required />
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-        <Label htmlFor="slug" className="sm:text-right">Slug</Label>
-        <Input id="slug" value={slug} onChange={(e) => setSlug(e.target.value)} className="sm:col-span-3" required />
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-        <Label htmlFor="description" className="sm:text-right">Deskripsi</Label>
-        <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} className="sm:col-span-3" />
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-        <Label htmlFor="type" className="sm:text-right">Tipe Kendaraan</Label>
-        <Select value={type} onValueChange={(value: VehicleType) => setType(value)}>
-          <SelectTrigger className="sm:col-span-3">
-            <SelectValue placeholder="Pilih Tipe Kendaraan" />
-          </SelectTrigger>
-          <SelectContent>
-            {Object.values(VehicleType).map((t) => (
-              <SelectItem key={t} value={t}>{t}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-        <Label htmlFor="capacity" className="sm:text-right">Kapasitas</Label>
-        <Input id="capacity" type="number" value={capacity} onChange={(e) => setCapacity(e.target.value)} className="sm:col-span-3" required />
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-        <Label htmlFor="transmissionType" className="sm:text-right">Transmisi</Label>
-        <Select value={transmissionType} onValueChange={(value: TransmissionType) => setTransmissionType(value)}>
-          <SelectTrigger className="sm:col-span-3">
-            <SelectValue placeholder="Pilih Tipe Transmisi" />
-          </SelectTrigger>
-          <SelectContent>
-            {Object.values(TransmissionType).map((t) => (
-              <SelectItem key={t} value={t}>{t}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-        <Label htmlFor="fuelType" className="sm:text-right">Bahan Bakar</Label>
-        <Select value={fuelType} onValueChange={(value: FuelType) => setFuelType(value)}>
-          <SelectTrigger className="sm:col-span-3">
-            <SelectValue placeholder="Pilih Tipe Bahan Bakar" />
-          </SelectTrigger>
-          <SelectContent>
-            {Object.values(FuelType).map((t) => (
-              <SelectItem key={t} value={t}>{t}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-        <Label htmlFor="dailyRate" className="sm:text-right">Harga Harian</Label>
-        <Input id="dailyRate" type="number" value={dailyRate} onChange={(e) => setDailyRate(e.target.value)} className="sm:col-span-3" required />
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-        <Label htmlFor="lateFeePerDay" className="sm:text-right">Denda Terlambat/Hari</Label>
-        <Input id="lateFeePerDay" type="number" value={lateFeePerDay} onChange={(e) => setLateFeePerDay(e.target.value)} className="sm:col-span-3" placeholder="Opsional" />
-      </div>
-      {/* PERUBAHAN DI SINI: Ganti input URL gambar dengan input file */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-        <Label htmlFor="mainImage" className="sm:text-right">Gambar Utama</Label>
-        <div className="col-span-full sm:col-span-3 flex flex-col gap-2">
-          <Input id="mainImage" type="file" accept="image/*" onChange={handleImageFileChange} />
-          {imagePreviewUrl && (
-            <div className="relative w-full h-32 rounded-md overflow-hidden border">
-              <img src={imagePreviewUrl} alt="Image Preview" className="w-full h-full object-cover" />
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                className="absolute top-1 right-1"
-                onClick={() => { setImageFile(null); setImagePreviewUrl(null); }}
-              >
-                Hapus
-              </Button>
-            </div>
-          )}
-          {!imagePreviewUrl && (
-            <p className="text-sm text-muted-foreground">Pilih file gambar (JPG, PNG, GIF).</p>
-          )}
-        </div>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-        <Label htmlFor="licensePlate" className="sm:text-right">Plat Nomor</Label>
-        <Input id="licensePlate" value={licensePlate} onChange={(e) => setLicensePlate(e.target.value)} className="sm:col-span-3" required />
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-        <Label htmlFor="city" className="sm:text-right">Kota</Label>
-        <Input id="city" value={city} onChange={(e) => setCity(e.target.value)} className="sm:col-span-3" required />
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-        <Label htmlFor="ownerId" className="sm:text-right">Pemilik</Label>
-        {ownersLoading ? (
-          <p className="sm:col-span-3 text-sm text-gray-500">Memuat pemilik...</p>
-        ) : ownersError ? (
-          <p className="sm:col-span-3 text-sm text-red-500">Error: {ownersError}</p>
-        ) : owners.length === 0 ? (
-          <p className="sm:col-span-3 text-sm text-orange-500">Tidak ada pemilik (OWNER) ditemukan. Harap tambahkan OWNER terlebih dahulu.</p>
-        ) : (
-          <Select value={ownerId} onValueChange={(value: string) => setOwnerId(value)}>
-            <SelectTrigger className="sm:col-span-3">
-              <SelectValue placeholder="Pilih Pemilik" />
-            </SelectTrigger>
-            <SelectContent>
-              {owners.map((owner) => (
-                <SelectItem key={owner.id} value={owner.id.toString()}>
-                  {owner.name} ({owner.email})
-                </SelectItem>
-              ))}
-            </SelectContent>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {step === 1 && (
+        <div className="grid gap-4">
+          <h3 className="text-lg font-semibold">Informasi Umum</h3>
+          <Input placeholder="Nama" value={name} onChange={e => setName(e.target.value)} required />
+          <Input placeholder="Slug" value={slug} onChange={e => setSlug(e.target.value)} required />
+          <Input placeholder="Deskripsi" value={description} onChange={e => setDescription(e.target.value)} />
+          <Select value={type} onValueChange={v => setType(v as VehicleType)}>
+            <SelectTrigger><SelectValue placeholder="Tipe Kendaraan" /></SelectTrigger>
+            <SelectContent>{Object.values(VehicleType).map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
           </Select>
-        )}
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-        <Label htmlFor="isAvailable" className="sm:text-right">Tersedia</Label>
-        <div className="col-span-full sm:col-span-3 flex items-center space-x-2">
-          <Checkbox id="isAvailable" checked={isAvailable} onCheckedChange={(checked: boolean) => setIsAvailable(checked)} />
-          <label htmlFor="isAvailable" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-            Kendaraan Tersedia untuk Disewa
-          </label>
+          <Input type="number" placeholder="Kapasitas" value={capacity} onChange={e => setCapacity(e.target.value)} />
         </div>
+      )}
+
+      {step === 2 && (
+        <div className="grid gap-4">
+          <h3 className="text-lg font-semibold">Spesifikasi Teknis</h3>
+          <Select value={transmissionType} onValueChange={v => setTransmissionType(v as TransmissionType)}>
+            <SelectTrigger><SelectValue placeholder="Transmisi" /></SelectTrigger>
+            <SelectContent>{Object.values(TransmissionType).map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+          </Select>
+          <Select value={fuelType} onValueChange={v => setFuelType(v as FuelType)}>
+            <SelectTrigger><SelectValue placeholder="Bahan Bakar" /></SelectTrigger>
+            <SelectContent>{Object.values(FuelType).map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {step === 3 && (
+        <div className="grid gap-4">
+          <h3 className="text-lg font-semibold">Harga & Gambar</h3>
+          <Input type="number" placeholder="Harga Harian" value={dailyRate} onChange={e => setDailyRate(e.target.value)} />
+          <Input type="number" placeholder="Denda Terlambat per Hari" value={lateFeePerDay} onChange={e => setLateFeePerDay(e.target.value)} />
+          <Input type="file" accept="image/*" onChange={handleImageChange} />
+          {imagePreviewUrl && <img src={imagePreviewUrl} alt="Preview" className="w-full h-32 object-cover rounded" />}
+        </div>
+      )}
+
+      {step === 4 && (
+        <div className="grid gap-4">
+          <h3 className="text-lg font-semibold">Status & Pemilik</h3>
+          <Input placeholder="Plat Nomor" value={licensePlate} onChange={e => setLicensePlate(e.target.value)} required />
+          <Input placeholder="Kota" value={city} onChange={e => setCity(e.target.value)} required />
+          <Checkbox checked={isAvailable} onCheckedChange={(c) => setIsAvailable(!!c)} /> Tersedia
+          <Select value={ownerId} onValueChange={v => setOwnerId(v)}>
+            <SelectTrigger><SelectValue placeholder="Pilih Pemilik" /></SelectTrigger>
+            <SelectContent>{owners.map(o => <SelectItem key={o.id} value={o.id.toString()}>{o.name}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+      )}
+
+      <div className="flex justify-between mt-6">
+        {step > 1 && <Button type="button" onClick={() => setStep(s => s - 1)}>Sebelumnya</Button>}
+        {step < 4 && <Button type="button" onClick={() => setStep(s => s + 1)}>Berikutnya</Button>}
+        {step === 4 && <Button type="submit" disabled={loading}>{loading ? 'Menyimpan...' : 'Simpan'}</Button>}
       </div>
 
-      <div className="flex justify-end gap-2 mt-4">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={loading || imageUploading}>
-          Batal
-        </Button>
-        <Button type="submit" disabled={loading || imageUploading || ownersLoading || owners.length === 0 || !imageFile}> {/* Disabled jika tidak ada file */}
-          {loading || imageUploading ? 'Menambahkan...' : 'Tambah Kendaraan'}
-        </Button>
+      <div className="flex justify-end">
+        <Button variant="outline" type="button" onClick={onCancel}>Batal</Button>
       </div>
     </form>
   );

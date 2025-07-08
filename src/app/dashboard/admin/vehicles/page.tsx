@@ -67,7 +67,7 @@ export default function ManageVehiclesPage() {
       return;
     }
     if (status === 'authenticated' && session &&
-       (session.user?.role !== Role.ADMIN && session.user?.role !== Role.OWNER)) {
+      (session.user?.role !== Role.ADMIN && session.user?.role !== Role.OWNER)) {
       router.push('/dashboard?error=Forbidden');
       return;
     }
@@ -237,24 +237,24 @@ export default function ManageVehiclesPage() {
         <div className="mb-4 flex justify-end">
           <Button onClick={() => setIsAddVehicleDialogOpen(true)}>Tambah Kendaraan</Button>
         </div>
-        {/* PERBAIKAN: Tambahkan filterColumnId dan filterPlaceholder */}
         <DataTable
           columns={columns}
           data={vehicles}
-          filterColumnId="name" // Filter berdasarkan kolom 'name'
-          filterPlaceholder="Filter nama kendaraan..." // Placeholder untuk input filter
+          filterColumnId="name"
+          filterPlaceholder="Filter nama kendaraan..."
         />
       </CardContent>
 
       {/* Dialog untuk Tambah Kendaraan */}
       <Dialog open={isAddVehicleDialogOpen} onOpenChange={setIsAddVehicleDialogOpen}>
-        <DialogContent className="max-w-xs">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col"> {/* Disesuaikan */}
           <DialogHeader>
             <DialogTitle>Tambah Kendaraan Baru</DialogTitle>
             <DialogDescription>
               Isi detail untuk menambahkan kendaraan baru ke sistem.
             </DialogDescription>
           </DialogHeader>
+          {/* AddVehicleForm akan mengelola scrollbar internalnya */}
           <AddVehicleForm
             onSuccess={() => {
               fetchVehicles();
@@ -270,13 +270,14 @@ export default function ManageVehiclesPage() {
 
       {/* Dialog untuk Edit Kendaraan */}
       <Dialog open={isEditVehicleDialogOpen} onOpenChange={setIsEditVehicleDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col"> {/* Disesuaikan */}
           <DialogHeader>
             <DialogTitle>Edit Kendaraan</DialogTitle>
             <DialogDescription>
               Ubah detail kendaraan di sini. Klik simpan saat selesai.
             </DialogDescription>
           </DialogHeader>
+          {/* EditVehicleForm akan mengelola scrollbar internalnya */}
           {selectedVehicle && (
             <EditVehicleForm
               vehicle={selectedVehicle}
@@ -292,6 +293,7 @@ export default function ManageVehiclesPage() {
           )}
         </DialogContent>
       </Dialog>
+
     </Card>
   );
 }
