@@ -1,4 +1,3 @@
-// src/components/dashboard/AddVehiclForm.tsx
 'use client';
 
 import { useState, useEffect, FormEvent } from 'react';
@@ -8,8 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { getApps } from 'firebase/app';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { uploadToSupabase } from '@/lib/uploadToSupabase';
 
 interface Props {
   onSuccess: () => void;
@@ -66,11 +64,7 @@ export default function AddVehicleWizardForm({ onSuccess, onCancel }: Props) {
 
   const uploadImage = async (): Promise<string> => {
     if (!imageFile) return '';
-    if (!getApps().length) throw new Error('Firebase tidak diinisialisasi');
-    const storage = getStorage();
-    const refFile = ref(storage, `vehicle_images/${imageFile.name}_${Date.now()}`);
-    const snap = await uploadBytes(refFile, imageFile);
-    return await getDownloadURL(snap.ref);
+    return await uploadToSupabase(imageFile, 'vehicle_images');
   };
 
   const handleSubmit = async (e: FormEvent) => {

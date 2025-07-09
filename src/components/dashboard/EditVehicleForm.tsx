@@ -7,8 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { getApps } from 'firebase/app';
-import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { uploadToSupabase } from '@/lib/uploadToSupabase';
 
 interface Props {
   vehicle: Vehicle;
@@ -16,46 +15,27 @@ interface Props {
   onCancel: () => void;
 }
 
-export default function EditVehicleWizardForm({ vehicle, onSuccess, onCancel }: Props) {
+export default function EditVehicleForm({ vehicle, onSuccess, onCancel }: Props) {
   const [step, setStep] = useState(1);
 
-  const [name, setName] = useState('');
-  const [slug, setSlug] = useState('');
-  const [description, setDescription] = useState('');
-  const [type, setType] = useState<VehicleType>(VehicleType.SEDAN);
-  const [capacity, setCapacity] = useState('');
-  const [transmissionType, setTransmissionType] = useState<TransmissionType>(TransmissionType.AUTOMATIC);
-  const [fuelType, setFuelType] = useState<FuelType>(FuelType.Bensin);
-  const [dailyRate, setDailyRate] = useState('');
-  const [lateFeePerDay, setLateFeePerDay] = useState('');
+  const [name, setName] = useState(vehicle.name);
+  const [slug, setSlug] = useState(vehicle.slug);
+  const [description, setDescription] = useState(vehicle.description || '');
+  const [type, setType] = useState<VehicleType>(vehicle.type);
+  const [capacity, setCapacity] = useState(vehicle.capacity.toString());
+  const [transmissionType, setTransmissionType] = useState<TransmissionType>(vehicle.transmissionType);
+  const [fuelType, setFuelType] = useState<FuelType>(vehicle.fuelType);
+  const [dailyRate, setDailyRate] = useState(vehicle.dailyRate.toString());
+  const [lateFeePerDay, setLateFeePerDay] = useState(vehicle.lateFeePerDay?.toString() || '');
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
-  const [licensePlate, setLicensePlate] = useState('');
-  const [city, setCity] = useState('');
-  const [ownerId, setOwnerId] = useState('');
-  const [isAvailable, setIsAvailable] = useState(true);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState(vehicle.mainImageUrl || '');
+  const [licensePlate, setLicensePlate] = useState(vehicle.licensePlate || '');
+  const [city, setCity] = useState(vehicle.city || '');
+  const [ownerId, setOwnerId] = useState(vehicle.ownerId?.toString() || '');
+  const [isAvailable, setIsAvailable] = useState(vehicle.isAvailable);
 
   const [owners, setOwners] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (vehicle) {
-      setName(vehicle.name);
-      setSlug(vehicle.slug);
-      setDescription(description);
-      setType(vehicle.type);
-      setCapacity(vehicle.capacity.toString());
-      setTransmissionType(vehicle.transmissionType);
-      setFuelType(vehicle.fuelType);
-      setDailyRate(vehicle.dailyRate.toString());
-      setLateFeePerDay(vehicle.lateFeePerDay?.toString() || '');
-      setLicensePlate(licensePlate);
-      setCity(city);
-      setOwnerId(vehicle.ownerId?.toString() || '');
-      setIsAvailable(vehicle.isAvailable);
-      setImagePreviewUrl(vehicle.mainImageUrl || null);
-    }
-  }, [vehicle]);
 
   useEffect(() => {
     const fetchOwners = async () => {
@@ -79,12 +59,13 @@ export default function EditVehicleWizardForm({ vehicle, onSuccess, onCancel }: 
   };
 
   const uploadImage = async (): Promise<string> => {
-    if (!imageFile) return vehicle.mainImageUrl || '';
-    if (!getApps().length) throw new Error('Firebase tidak diinisialisasi');
-    const storage = getStorage();
-    const refFile = ref(storage, `vehicle_images/${imageFile.name}_${Date.now()}`);
-    const snap = await uploadBytes(refFile, imageFile);
-    return await getDownloadURL(snap.ref);
+    if (!imageFile) return imagePreviewUrl;
+    try {
+      return await uploadToSupabase(imageFile, 'vehicle_images');
+    } catch (err) {
+      toast.error('Gagal upload gambar ke Supabase');
+      throw err;
+    }
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -112,11 +93,12 @@ export default function EditVehicleWizardForm({ vehicle, onSuccess, onCancel }: 
           ownerId: parseInt(ownerId),
         }),
       });
+
       if (!res.ok) throw new Error('Gagal menyimpan perubahan');
       toast.success('Kendaraan berhasil diperbarui');
       onSuccess();
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error(err.message || 'Terjadi kesalahan');
     } finally {
       setLoading(false);
     }
@@ -132,7 +114,11 @@ export default function EditVehicleWizardForm({ vehicle, onSuccess, onCancel }: 
           <Input placeholder="Deskripsi" value={description} onChange={e => setDescription(e.target.value)} />
           <Select value={type} onValueChange={v => setType(v as VehicleType)}>
             <SelectTrigger><SelectValue placeholder="Tipe Kendaraan" /></SelectTrigger>
-            <SelectContent>{Object.values(VehicleType).map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+            <SelectContent>
+              {Object.values(VehicleType).map(t => (
+                <SelectItem key={t} value={t}>{t}</SelectItem>
+              ))}
+            </SelectContent>
           </Select>
           <Input type="number" placeholder="Kapasitas" value={capacity} onChange={e => setCapacity(e.target.value)} />
         </div>
@@ -143,11 +129,19 @@ export default function EditVehicleWizardForm({ vehicle, onSuccess, onCancel }: 
           <h3 className="text-lg font-semibold">Spesifikasi Teknis</h3>
           <Select value={transmissionType} onValueChange={v => setTransmissionType(v as TransmissionType)}>
             <SelectTrigger><SelectValue placeholder="Transmisi" /></SelectTrigger>
-            <SelectContent>{Object.values(TransmissionType).map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+            <SelectContent>
+              {Object.values(TransmissionType).map(t => (
+                <SelectItem key={t} value={t}>{t}</SelectItem>
+              ))}
+            </SelectContent>
           </Select>
           <Select value={fuelType} onValueChange={v => setFuelType(v as FuelType)}>
             <SelectTrigger><SelectValue placeholder="Bahan Bakar" /></SelectTrigger>
-            <SelectContent>{Object.values(FuelType).map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+            <SelectContent>
+              {Object.values(FuelType).map(t => (
+                <SelectItem key={t} value={t}>{t}</SelectItem>
+              ))}
+            </SelectContent>
           </Select>
         </div>
       )}
@@ -167,10 +161,17 @@ export default function EditVehicleWizardForm({ vehicle, onSuccess, onCancel }: 
           <h3 className="text-lg font-semibold">Status & Pemilik</h3>
           <Input placeholder="Plat Nomor" value={licensePlate} onChange={e => setLicensePlate(e.target.value)} required />
           <Input placeholder="Kota" value={city} onChange={e => setCity(e.target.value)} required />
-          <Checkbox checked={isAvailable} onCheckedChange={(c) => setIsAvailable(!!c)} /> Tersedia
+          <div className="flex items-center space-x-2">
+            <Checkbox checked={isAvailable} onCheckedChange={(c) => setIsAvailable(!!c)} />
+            <span>Tersedia</span>
+          </div>
           <Select value={ownerId} onValueChange={v => setOwnerId(v)}>
             <SelectTrigger><SelectValue placeholder="Pilih Pemilik" /></SelectTrigger>
-            <SelectContent>{owners.map(o => <SelectItem key={o.id} value={o.id.toString()}>{o.name}</SelectItem>)}</SelectContent>
+            <SelectContent>
+              {owners.map(o => (
+                <SelectItem key={o.id} value={o.id.toString()}>{o.name}</SelectItem>
+              ))}
+            </SelectContent>
           </Select>
         </div>
       )}
