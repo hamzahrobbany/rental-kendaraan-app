@@ -4,11 +4,11 @@
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { Home, Users, Car, ShoppingCart, LogOut } from 'lucide-react';
-import { signOut } from 'next-auth/react';
-import { Button } from '../ui/button';
-import { ScrollArea } from '../ui/scroll-area'; // Import ScrollArea
-import { Separator } from '../ui/separator'; // Import Separator
+import { Home, Users, Car, ShoppingCart } from 'lucide-react'; // Hapus LogOut
+// import { signOut } from 'next-auth/react'; // Hapus signOut
+// import { Button } from '../ui/button'; // Hapus Button jika tidak ada penggunaan lain
+import { ScrollArea } from '../ui/scroll-area';
+import { Separator } from '../ui/separator';
 
 interface SidebarProps {
   userRole: string;
@@ -51,9 +51,9 @@ export default function Sidebar({ userRole }: SidebarProps) {
           SewaCepat
         </Link>
       </div>
-      <Separator className="mb-6 bg-gray-200" /> {/* Pemisah gaya Shadcn */}
+      <Separator className="mb-6 bg-gray-200" />
 
-      <ScrollArea className="flex-grow"> {/* Gunakan ScrollArea untuk konten navigasi */}
+      <ScrollArea className="flex-grow">
         <nav className="grid items-start gap-2">
           {navItems.map((item) => {
             if (item.roles.includes(userRole)) {
@@ -67,7 +67,7 @@ export default function Sidebar({ userRole }: SidebarProps) {
                     "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
                     isActive && "bg-muted text-primary hover:text-primary"
                   )}
-                  prefetch={false} // Opsional: untuk kontrol prefetching
+                  prefetch={false}
                 >
                   <Icon className="h-5 w-5" />
                   {item.label}
@@ -79,17 +79,18 @@ export default function Sidebar({ userRole }: SidebarProps) {
         </nav>
       </ScrollArea>
 
-      <div className="mt-auto pt-6"> {/* Pemisah lebih besar sebelum logout */}
+      {/* Bagian logout dihapus sepenuhnya */}
+      {/* <div className="mt-auto pt-6">
         <Separator className="mb-4 bg-gray-200" />
         <Button
           onClick={() => signOut({ callbackUrl: '/' })}
-          variant="secondary" // Menggunakan variant secondary agar cocok dengan tema
+          variant="secondary"
           className="w-full justify-start text-base"
         >
           <LogOut className="mr-3 h-5 w-5" />
           Logout
         </Button>
-      </div>
+      </div> */}
     </aside>
   );
 }
