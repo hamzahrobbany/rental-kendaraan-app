@@ -4,9 +4,7 @@
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { Home, Users, Car, ShoppingCart } from 'lucide-react'; // Hapus LogOut
-// import { signOut } from 'next-auth/react'; // Hapus signOut
-// import { Button } from '../ui/button'; // Hapus Button jika tidak ada penggunaan lain
+import { Home, Users, Car, ShoppingCart } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
 import { Separator } from '../ui/separator';
 
@@ -28,7 +26,7 @@ export default function Sidebar({ userRole }: SidebarProps) {
       href: '/dashboard/admin/users',
       icon: Users,
       label: 'Kelola Pengguna',
-      roles: ['ADMIN'],
+      roles: ['ADMIN', 'OWNER'], // PERBAIKAN: Tambahkan 'OWNER' di sini
     },
     {
       href: '/dashboard/admin/vehicles',
@@ -78,19 +76,6 @@ export default function Sidebar({ userRole }: SidebarProps) {
           })}
         </nav>
       </ScrollArea>
-
-      {/* Bagian logout dihapus sepenuhnya */}
-      {/* <div className="mt-auto pt-6">
-        <Separator className="mb-4 bg-gray-200" />
-        <Button
-          onClick={() => signOut({ callbackUrl: '/' })}
-          variant="secondary"
-          className="w-full justify-start text-base"
-        >
-          <LogOut className="mr-3 h-5 w-5" />
-          Logout
-        </Button>
-      </div> */}
     </aside>
   );
 }
