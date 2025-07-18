@@ -3,12 +3,12 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import prisma from '@/lib/db';
-import { Role, TransmissionType, FuelType, VehicleType, OrderStatus } from '@prisma/client'; // Import VehicleType dan OrderStatus
+import { Role, TransmissionType, FuelType, VehicleType, OrderStatus } from '@prisma/client';
 
 // Helper function untuk memeriksa izin ADMIN/OWNER
 const checkAdminOwnerPermission = async () => {
   const session = await getServerSession(authOptions);
-  if (!session || (session.user?.role !== Role.ADMIN && session.user?.role !== Role.OWNER)) {
+  if (!session || ![Role.ADMIN, Role.OWNER].includes(session.user?.role as Role)) {
     return null; // Mengembalikan null jika tidak ada izin
   }
   return session; // Mengembalikan sesi jika ada izin
@@ -186,7 +186,7 @@ export async function POST(req: Request) {
     }
 
     // Validasi enum types
-    if (!Object.values(VehicleType).includes(type as VehicleType)) { // PERBAIKAN: Validasi VehicleType
+    if (!Object.values(VehicleType).includes(type as VehicleType)) {
       return NextResponse.json({ message: 'Tipe kendaraan tidak valid.' }, { status: 400 });
     }
     if (!Object.values(TransmissionType).includes(transmissionType as TransmissionType)) {
@@ -225,10 +225,10 @@ export async function POST(req: Request) {
         name,
         slug,
         description: description || null,
-        type: type as VehicleType, // Pastikan tipe enum
+        type: type as VehicleType,
         capacity: parseInt(capacity),
-        transmissionType: transmissionType as TransmissionType, // Pastikan tipe enum
-        fuelType: fuelType as FuelType, // Pastikan tipe enum
+        transmissionType: transmissionType as TransmissionType,
+        fuelType: fuelType as FuelType,
         dailyRate: parseFloat(dailyRate),
         lateFeePerDay: parseFloat(lateFeePerDay || '0'),
         mainImageUrl: mainImageUrl || 'https://placehold.co/600x400/gray/white?text=No+Image',
